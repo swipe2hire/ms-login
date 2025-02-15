@@ -1,20 +1,20 @@
 
 
-export const createReponsePayload = ({data= null,error=[{ code: "", message: "" }],validation=[{ code: "", message: "" }]} = {}) => {
+export const createReponsePayload = ({data= null,error=[],validation=[]} = {}) => {
     return {
         data,
         errorMessage: error,
         validationMessage: validation,
-        hasValidation: validation.length>0,
-        hasError: error.length > 0,
-        sucess: errorMessage.length === 0 && validation.length === 0
+        hasValidation: validation?.length>0,
+        hasError: error?.length > 0,
+        sucess: !error && !validation
 
     }
 }
 
 
-export const sendReponse = (res,{data= null,error=[{ code: "", message: "" }],validation=[{ code: "", message: "" }]} = {}) => {
-    return res.status(error.length === 0 && validation.length === 0?200:400).json(createReponsePayload(data,error,validation));
+export const sendReponse = (res,{data= null,error=null,validation=null} = {}) => {
+    return res.status((!error && !validation)?200:400).json(createReponsePayload({data,error,validation}));
 }
 
 

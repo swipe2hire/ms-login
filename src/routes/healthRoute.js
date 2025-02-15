@@ -22,6 +22,7 @@ routes.get("/heathcheck",async (request,response)=> {
     memoryUsage: process.memoryUsage(),
     cpuUsage: process.cpuUsage(),
     loadAverage: os.loadavg(),
+    dbStatus:dbStatus
     })
 })
 

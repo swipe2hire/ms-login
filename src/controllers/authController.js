@@ -10,33 +10,32 @@ exports.login = async (request,response) => {
 }
 
 exports.signup = async(request,response) => {
-    debugger;
     const signupUser = mongoose.model("signupUser",signUpSchema)
-    const {error,value} = schema.signupSchema.validate(request);
+    const {error,value} = schema.signupSchema.validate(request.body);
     if(error) {
-        responseHelper.sendReponse(response,{data:null,error:[{code:literals.errorCodes.invalidJasonParse,message:"Invalid Request"}]})
+       return responseHelper.sendReponse(response,{data:null,error:[{code:literals.errorCodes.invalidJasonParse,message:error.message}], validation:null})
     } else {
         //step1 : check for existing user
-        const {firstName, lastName, email, dob} = request.body;
+        const {firstName, lastName, email, dob, password} = request.body;
         const name = firstName+lastName;
         try{
             const existingUser = await signupUser.findOne({email})
             if(existingUser) {
-                responseHelper.sendReponse(response,{data:null,error:[{code:"EXISTING_USER",message:"EXISTING_USER"}]})
+            return responseHelper.sendReponse(response,{data:null,error:[{code:"EXISTING_USER",message:"EXISTING_USER"}]})
             } else {
-                const newUser = new signupUser({ name, email, password });
+                const newUser = new signupUser({dob, name, email, password });
                 await newUser.save()
-                responseHelper.sendReponse(response,{data:null,error:null,validation:null})
+             return responseHelper.sendReponse(response,{data:null,error:null,validation:null})
             }
         } catch(error){
-            responseHelper.sendReponse(response,{data:null,error:[{code:error.code,message:error.message}]})
+            return responseHelper.sendReponse(response,{data:null,error:[{code:error.code,message:error.message}]})
 
         }
 
     }
 
     //default error
-    responseHelper.sendDefaultErrorResponse(response);
+    return responseHelper.sendDefaultErrorResponse(response);
     
 }
 

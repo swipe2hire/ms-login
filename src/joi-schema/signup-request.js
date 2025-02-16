@@ -7,5 +7,6 @@ export const signupSchema = Joi.object({
     firstName: Joi.string().required(),
     lastName: Joi.string().required(),
     dob: Joi.string().required(),
-    role: Joi.string()
+    role: Joi.string(),
+    userType: Joi.string()
 })

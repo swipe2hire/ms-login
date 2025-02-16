@@ -16,14 +16,14 @@ exports.signup = async(request,response) => {
        return responseHelper.sendReponse(response,{data:null,error:[{code:literals.errorCodes.invalidJasonParse,message:error.message}], validation:null})
     } else {
         //step1 : check for existing user
-        const {firstName, lastName, email, dob, password} = request.body;
+        const {firstName, lastName, email, dob, password, role} = request.body;
         const name = firstName+lastName;
         try{
             const existingUser = await signupUser.findOne({email})
             if(existingUser) {
             return responseHelper.sendReponse(response,{data:null,error:[{code:"EXISTING_USER",message:"EXISTING_USER"}]})
             } else {
-                const newUser = new signupUser({dob, name, email, password });
+                const newUser = new signupUser({dob, name, email, password, role });
                 await newUser.save()
              return responseHelper.sendReponse(response,{data:null,error:null,validation:null})
             }

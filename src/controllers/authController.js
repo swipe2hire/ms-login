@@ -5,7 +5,10 @@ const literals = require("../literals/literals")
 const signUpSchema = require("../db-schemas/signup-schema")
 const bcrypt = require("bcryptjs");
 const configs = require("../../config")
+const otpUser = require("../db-schemas/otp-schema");
+const otpGenerator = require("otp-generator")
 const jwt = require("jsonwebtoken");
+const {sendOTPEmail} = require("../services/emailService")
 const { default: mongoose } = require("mongoose")
 
 
@@ -78,17 +81,38 @@ exports.signup = async(request,response) => {
 }
 
 
+exports.sendotp = async(request,response) =>{
+    const signupUser = mongoose.model("signupUser",signUpSchema)
+    const {error,value} = schema.signupSchema.validate(request.body);
+    if(error) {
+        return responseHelper.sendReponse(response,{data:null,error:[{code:literals.errorCodes.invalidJasonParse,message:error.message}], validation:null})
+     } else {
+         //step1 : check for existing user
+         const {firstName, lastName, email, dob, password} = request.body;
+         const name = firstName+lastName;
+         try{
+             const existingUser = await signupUser.findOne({email})
+             if(existingUser) {
+             return responseHelper.sendReponse(response,{data:null,error:[{code:"EXISTING_USER",message:"EXISTING_USER"}]})
+             } else {
+                const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false });
+                const emailSent = await sendOTPEmail(email,otp);
+                if(emailSent.sucess) {
+                    const otpUserObj = new otpUser({name,email,dob,password,otp})
+                    await otpUserObj.save();
+                    return responseHelper.sendReponse(response,{data:{email: email},error:null,validation:null})
 
-
-
-exports.forgotPassword = async (request,response) => {
-    response.send("forgotpassword")
+                } else {
+                    return responseHelper.sendReponse(response,{data:null,error:[{code:"SEND_OTP_Error",message: emailSent.error}]})
+                }
+                
+             }
+         } catch(error){
+             return responseHelper.sendReponse(response,{data:null,error:[{code:error.code,message:error.message}]})
+         }
+     }  
 }
 
-exports.resetPassword = async (request,response) => {
-    response.send("resetPassword");
-}
 
-exports.resetToken = async (request,response) => {
-    response.send("refershToken");
-}
+
+

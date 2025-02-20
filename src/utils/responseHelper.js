@@ -8,13 +8,16 @@ export const createReponsePayload = ({data= null,error=[],validation=[]} = {}) =
         hasValidation: validation?.length>0,
         hasError: error?.length > 0,
         sucess: !error && !validation
-
     }
 }
 
 
 export const sendReponse = (res,{data= null,error=null,validation=null} = {}) => {
-    return res.status((!error && !validation)?200:400).json(createReponsePayload({data,error,validation}));
+    let statusCode = !error && !validation ? 200 : 400
+    if(error && error[0]?.code === "40001") {
+       statusCode = 401  
+    }
+    return res.status(statusCode).json(createReponsePayload({data,error,validation}));
 }
 
 

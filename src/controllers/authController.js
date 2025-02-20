@@ -20,7 +20,7 @@ exports.login = async (request,response) => {
 const signupUser = mongoose.model("signupUser",signUpSchema)
 const {error,value} = loginModel.loginRequest.validate(request.body)
 if(error) {
-    return responseHelper.sendReponse(response,{data:null,error:[{code:literals.errorCodes.invalidJasonParse,message:error.message}], validation:null})
+    return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError);
 } else {
     const {email,password} = value;
     try {
@@ -38,27 +38,26 @@ if(error) {
                 })
                 return responseHelper.sendReponse(response,{data:{token:jwtToken, name: `${user.firstName} ${user.lastName}`},error:null,validation:null})
             } else {
-                return responseHelper.sendReponse(response,{data:null,error:[{code:literals.errorCodes.invalidCredentials,message:"INVALID_CREDENTIALS"}]})
+                return responseHelper.sendReponse(response,literals.errorCodes.invalidCredentials)
             }
             
         } else {
-            return responseHelper.sendReponse(response,{data:null,error:[{code:literals.errorCodes.invalidCredentials,message:"INVALID_CREDENTIALS"}]})
+            return responseHelper.sendReponse(response,literals.errorCodes.invalidCredentials)
         }
     } catch(error){
-            return responseHelper.sendReponse(response,{data:null,error:[{code:error.code,message:error.message}]})
-
+            return responseHelper.sendReponse(response,literals.errorCodes.generalError)
     }
 }
 }
 
 
 
-
+//signup
 exports.signup = async(request,response) => {
     const signupUser = mongoose.model("signupUser",signUpSchema)
     const {error,value} = schema.signupSchema.validate(request.body);
     if(error) {
-       return responseHelper.sendReponse(response,{data:null,error:[{code:literals.errorCodes.invalidJasonParse,message:error.message}], validation:null})
+       return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError);
     } else {
         //step1 : check for existing user
         const {firstName, lastName, email, dob, password, role} = request.body;
@@ -66,26 +65,24 @@ exports.signup = async(request,response) => {
         try{
             const existingUser = await signupUser.findOne({email})
             if(existingUser) {
-            return responseHelper.sendReponse(response,{data:null,error:[{code:"EXISTING_USER",message:"EXISTING_USER"}]})
+            return responseHelper.sendReponse(response,literals.errorCodes.existingUserError)
             } else {
                 const newUser = new signupUser({dob, name, email, password, role });
                 await newUser.save()
-             return responseHelper.sendReponse(response,{data:null,error:null,validation:null})
+             return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata)
             }
         } catch(error){
-            return responseHelper.sendReponse(response,{data:null,error:[{code:error.code,message:error.message}]})
-
+            return responseHelper.sendReponse(response,literals.errorCodes.generalError)
         }
-
     }  
 }
 
-
+//sendotp
 exports.sendotp = async(request,response) =>{
     const signupUser = mongoose.model("signupUser",signUpSchema)
     const {error,value} = schema.signupSchema.validate(request.body);
     if(error) {
-        return responseHelper.sendReponse(response,{data:null,error:[{code:literals.errorCodes.invalidJasonParse,message:error.message}], validation:null})
+        return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
      } else {
          //step1 : check for existing user
          const {firstName, lastName, email, dob, password} = request.body;
@@ -93,24 +90,101 @@ exports.sendotp = async(request,response) =>{
          try{
              const existingUser = await signupUser.findOne({email})
              if(existingUser) {
-             return responseHelper.sendReponse(response,{data:null,error:[{code:"EXISTING_USER",message:"EXISTING_USER"}]})
+             return responseHelper.sendReponse(response,literals.errorCodes.existingUserError)
              } else {
                 const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false });
                 const emailSent = await sendOTPEmail(email,otp);
                 if(emailSent.sucess) {
                     const otpUserObj = new otpUser({name,email,dob,password,otp})
                     await otpUserObj.save();
-                    return responseHelper.sendReponse(response,{data:{email: email},error:null,validation:null})
+                    return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata)
 
                 } else {
-                    return responseHelper.sendReponse(response,{data:null,error:[{code:"SEND_OTP_Error",message: emailSent.error}]})
+                    return responseHelper.sendReponse(response,literals.errorCodes.emailOTPSendError)
                 }
-                
              }
          } catch(error){
-             return responseHelper.sendReponse(response,{data:null,error:[{code:error.code,message:error.message}]})
+             return responseHelper.sendReponse(response,literals.errorCodes.generalError)
          }
      }  
+}
+
+//verify
+exports.verifyotp = async(request,response) =>{
+   const signupUser = mongoose.model("signupUser",signUpSchema)
+   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+   if(!request.body?.otp) {
+    return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
+   } else {
+    try {
+        const otpUser = await otpUser.findOne({otp, createdAt: {$gte:tenMinutesAgo}});
+        if(otpUser) {
+            const signup = new signupUser({
+                password:otpUser.password,
+                email:otpUser.email,
+                name:otpUser.name,
+                dob:otpUser.dob
+                })
+                await signup.save();
+                return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata)
+        } else {
+            return responseHelper.sendReponse(response,{data:null,error:literals.errorCodes.verfifyOtpFailed, validation:null})
+        } 
+    }catch(error) {
+        return responseHelper.sendReponse(response,literals.errorCodes.generalError)
+    }
+}
+}
+
+//forgotPassword
+
+exports.verifyEmail= async(request,response) => {
+    const signupUser = mongoose.model("signupUser",signUpSchema)
+    if(!request.body?.email){
+        return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
+    } else {
+        try {
+            const email = request.body.email
+            const signup = await signupUser.findOne({email})
+            if(signup) {
+                return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata);
+            } else {
+                return responseHelper.sendReponse(response,literals.errorCodes.invalidEmail);
+            }
+
+        } catch(error){
+            return responseHelper.sendReponse(response,literals.errorCodes.generalError)
+        }
+    }
+}
+
+
+exports.resetPassword = async(request,response) => {
+    const signupUser = mongoose.model("signupUser",signUpSchema)
+    if(!request.body?.email || !request.body?.password){
+        return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
+    } else {
+        try {
+            const {email,password} = request.body;
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+        
+            // Find user by email and update password
+            const updatedUser = await signupUser.findOneAndUpdate(
+              { email }, // Find user by email
+              { password: hashedPassword }, // Update password
+              { new: true } // Return updated document
+            );
+        
+            if (!updatedUser) {
+              return responseHelper.sendReponse(response,literals.errorCodes.invalidEmail);
+            } else {
+                return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata);
+            }
+        } catch(error){
+            return responseHelper.sendReponse(response,literals.errorCodes.generalError)
+        }
+    }
 }
 
 

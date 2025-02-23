@@ -81,12 +81,14 @@ exports.signup = async(request,response) => {
 exports.sendotp = async(request,response) =>{
     const signupUser = mongoose.model("signupUser",signUpSchema)
     const {error,value} = schema.signupSchema.validate(request.body);
+    console.log("In send OTP", value)
     if(error) {
         return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
      } else {
          //step1 : check for existing user
          const {firstName, lastName, email, dob, password} = request.body;
          const name = firstName+lastName;
+         console.log("In send OTP else", firstName, lastName, email, dob, password)
          try{
              const existingUser = await signupUser.findOne({email})
              if(existingUser) {
@@ -94,47 +96,74 @@ exports.sendotp = async(request,response) =>{
              } else {
                 const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false });
                 const emailSent = await sendOTPEmail(email,otp);
+                console.log("Email--", emailSent);
                 if(emailSent.sucess) {
                     const otpUserObj = new otpUser({name,email,dob,password,otp})
                     await otpUserObj.save();
+                    console.log("response---", responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata))
                     return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata)
 
                 } else {
+                    console.log("in else")
                     return responseHelper.sendReponse(response,literals.errorCodes.emailOTPSendError)
                 }
              }
          } catch(error){
+             console.log("In error", error)
              return responseHelper.sendReponse(response,literals.errorCodes.generalError)
          }
      }  
 }
 
 //verify
-exports.verifyotp = async(request,response) =>{
-   const signupUser = mongoose.model("signupUser",signUpSchema)
-   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-   if(!request.body?.otp) {
-    return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
-   } else {
-    try {
-        const otpUser = await otpUser.findOne({otp, createdAt: {$gte:tenMinutesAgo}});
-        if(otpUser) {
-            const signup = new signupUser({
-                password:otpUser.password,
-                email:otpUser.email,
-                name:otpUser.name,
-                dob:otpUser.dob
-                })
-                await signup.save();
-                return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata)
-        } else {
-            return responseHelper.sendReponse(response,{data:null,error:literals.errorCodes.verfifyOtpFailed, validation:null})
-        } 
-    }catch(error) {
-        return responseHelper.sendReponse(response,literals.errorCodes.generalError)
+exports.verifyotp = async(request, response) => {
+    const signupUser = mongoose.model("signupUser", signUpSchema);
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+    if(!request.body?.otp || !request.body?.email) {
+        return responseHelper.sendReponse(response, literals.errorCodes.invaliJasonError);
     }
-}
-}
+
+    const { otp, email } = request.body;
+
+    try {
+        const otpRecord = await otpUser.findOne({
+            email,
+            otp,
+            createdAt: { $gte: tenMinutesAgo },
+            isVerified: false
+        }).sort({ createdAt: -1 });
+
+        if(otpRecord) {
+          
+            otpRecord.isVerified = true;
+            await otpRecord.save();
+
+           
+            const signup = new signupUser({
+                password: otpRecord.password,
+                email: otpRecord.email,
+                name: otpRecord.name,
+                dob: otpRecord.dob
+            });
+            
+            await signup.save();
+            
+            await otpUser.deleteMany({ email: otpRecord.email });
+            
+            return responseHelper.sendReponse(response, literals.errorCodes.sucessWithNodata);
+        } else {
+            return responseHelper.sendReponse(response, {
+                data: null,
+                error: literals.errorCodes.verfifyOtpFailed,
+                validation: null
+            });
+        }
+    } catch(error) {
+        console.log("Error in verifyotp:", error);
+        return responseHelper.sendReponse(response, literals.errorCodes.generalError);
+    }
+};
 
 //forgotPassword
 

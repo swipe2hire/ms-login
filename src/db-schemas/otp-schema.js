@@ -3,10 +3,11 @@ const bcrypt = require("bcryptjs");
 
 const otpSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true },
     password: { type: String, required: true },
     dob:{type:String, required:true},
     otp: {type:String, required:true},
+    isVerified: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now, expires: 600 }
 })
 

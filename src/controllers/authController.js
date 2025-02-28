@@ -97,8 +97,8 @@ exports.sendotp = async(request,response) =>{
                 const existingOtpUser = await otpUser.findOne({email})
                 if(existingOtpUser !== null) {
                    const emailSent = await sendOTPEmail(email,newOtp);
-                   if(emailSent.success) {
-                    const updateExistingUser = otpUser.findOneAndUpdate(
+                   if(emailSent.sucess) {
+                    const updateExistingUser = await otpUser.findOneAndUpdate(
                         {email},
                         {otp:newOtp},
                         {createdAt: Date.now()}
@@ -111,8 +111,8 @@ exports.sendotp = async(request,response) =>{
                    }
                 } else {
                     const emailSent = await sendOTPEmail(email,newOtp);
-                if(emailSent.success) {
-                    const otpUserObj = new otpUser({name,email,dob,password,newOtp})
+                if(emailSent.sucess) {
+                    const otpUserObj = new otpUser({name,email,dob,password,otp:newOtp})
                     await otpUserObj.save();
                     return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata)
 

@@ -92,15 +92,33 @@ exports.sendotp = async(request,response) =>{
              if(existingUser) {
              return responseHelper.sendReponse(response,literals.errorCodes.existingUserError)
              } else {
-                const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false });
-                const emailSent = await sendOTPEmail(email,otp);
-                if(emailSent.sucess) {
-                    const otpUserObj = new otpUser({name,email,dob,password,otp})
+                const newOtp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false });
+                //Step2 : Check if otp alredy exists then just create a new OTP and update the same Record
+                const existingOtpUser = await otpUser.findOne({email})
+                if(existingOtpUser !== null) {
+                   const emailSent = await sendOTPEmail(email,newOtp);
+                   if(emailSent.success) {
+                    const updateExistingUser = otpUser.findOneAndUpdate(
+                        {email},
+                        {otp:newOtp},
+                        {createdAt: Date.now()}
+                    )
+                    if(updateExistingUser) {
+                        return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata) 
+                    } else {
+                        return responseHelper.sendReponse(response,literals.errorCodes.emailOTPSendError)
+                    }
+                   }
+                } else {
+                    const emailSent = await sendOTPEmail(email,newOtp);
+                if(emailSent.success) {
+                    const otpUserObj = new otpUser({name,email,dob,password,newOtp})
                     await otpUserObj.save();
                     return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata)
 
                 } else {
                     return responseHelper.sendReponse(response,literals.errorCodes.emailOTPSendError)
+                }
                 }
              }
          } catch(error){

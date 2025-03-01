@@ -129,19 +129,25 @@ exports.sendotp = async(request,response) =>{
 
 //verify
 exports.verifyotp = async(request,response) =>{
+   console.log("Inside OTP") 
    const signupUser = mongoose.model("signupUser",signUpSchema)
    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+   console.log("request body for verify OTP", request.body?.otp)
    if(!request.body?.otp) {
+     console.log("Inside OTP If")  
     return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
    } else {
+       console.log("Inside else otp")
     try {
-        const otpUser = await otpUser.findOne({otp, createdAt: {$gte:tenMinutesAgo}});
-        if(otpUser) {
+        
+        console.log("request body for verify OTP", request.body)
+        const otpUserResponse = await otpUser.findOne({otp: request.body?.otp, createdAt: {$gte:tenMinutesAgo}});
+        if(otpUserResponse) {
             const signup = new signupUser({
-                password:otpUser.password,
-                email:otpUser.email,
-                name:otpUser.name,
-                dob:otpUser.dob
+                password:otpUserResponse.password,
+                email:otpUserResponse.email,
+                name:otpUserResponse.name,
+                dob:otpUserResponse.dob
                 })
                 await signup.save();
                 return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata)
@@ -149,6 +155,7 @@ exports.verifyotp = async(request,response) =>{
             return responseHelper.sendReponse(response,{data:null,error:literals.errorCodes.verfifyOtpFailed, validation:null})
         } 
     }catch(error) {
+        console.log("catch----OTP", error)
         return responseHelper.sendReponse(response,literals.errorCodes.generalError)
     }
 }

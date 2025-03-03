@@ -1,6 +1,7 @@
 const schema = require("../joi-schema/signup-request")
 const loginModel = require("../joi-schema/login-request")
 const responseHelper = require("../utils/responseHelper")
+const verifyOtpModel = require("../joi-schema/verify-otp-request")
 const literals = require("../literals/literals")
 const signUpSchema = require("../db-schemas/signup-schema")
 const bcrypt = require("bcryptjs");
@@ -28,7 +29,7 @@ if(error) {
         if(user) {
             const isPasswordMatch = await bcrypt.compare(password, user.password);
             if(isPasswordMatch) {
-                const jwtToken = jwt.sign({ userId: user._id, email: user.email }, configs.JwtToken, {
+                const jwtToken = jwt.sign({ userId: user._id, email: user.email, role: user.role }, configs.JwtToken, {
                     expiresIn: "7d",
                 });
                 response.cookie("s_t",jwtToken,{
@@ -36,7 +37,7 @@ if(error) {
                     sameSite: "strict",
                     maxAge: 7 * 24 * 60 * 60 * 1000
                 })
-                return responseHelper.sendReponse(response,{data:{token:jwtToken, name: `${user.firstName} ${user.lastName}`},error:null,validation:null})
+                return responseHelper.sendReponse(response,{data:{token:jwtToken, name:`${user.firstName} ${user.lastName}`, role:user.role},error:null,validation:null})
             } else {
                 return responseHelper.sendReponse(response,literals.errorCodes.invalidCredentials)
             }
@@ -85,7 +86,7 @@ exports.sendotp = async(request,response) =>{
         return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
      } else {
          //step1 : check for existing user
-         const {firstName, lastName, email, dob, password} = request.body;
+         const {firstName, lastName, email, dob, password, role, userType} = request.body;
          const name = firstName+lastName;
          try{
              const existingUser = await signupUser.findOne({email})
@@ -131,20 +132,24 @@ exports.sendotp = async(request,response) =>{
 exports.verifyotp = async(request,response) =>{
    const signupUser = mongoose.model("signupUser",signUpSchema)
    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-   if(!request.body?.otp) {
+   const {error,value} = verifyOtpModel.verifyOtpRequest.validate(request.body)
+   if(error) {
     return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
    } else {
     try {
-        const otpUser = await otpUser.findOne({otp, createdAt: {$gte:tenMinutesAgo}});
+        const {otp,email} = value
+        const otpUser = await otpUser.findOne({otp, createdAt: {$gte:tenMinutesAgo}, email});
         if(otpUser) {
             const signup = new signupUser({
                 password:otpUser.password,
                 email:otpUser.email,
                 name:otpUser.name,
-                dob:otpUser.dob
+                dob:otpUser.dob,
+                role:otpUser.role,
+                userType:otpUser.userType
                 })
                 await signup.save();
-                return responseHelper.sendReponse(response,literals.errorCodes.sucessWithNodata)
+                return responseHelper.sendReponse(response,{data:{email: otpUser.email}})
         } else {
             return responseHelper.sendReponse(response,{data:null,error:literals.errorCodes.verfifyOtpFailed, validation:null})
         } 

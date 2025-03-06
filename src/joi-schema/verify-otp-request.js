@@ -1,6 +1,6 @@
 import Joi from "joi";
 
 export const verifyOtpRequest = Joi.object({
-    email:joi.string().required().email(),
-    otp: joi.string().required()
+    email:Joi.string().required().email(),
+    otp: Joi.string().required()
 })

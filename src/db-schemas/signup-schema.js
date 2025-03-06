@@ -7,6 +7,18 @@ const signupSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     dob:{type:String, required:true},
+    role: {
+        type: String,
+        enum: ["admin", "manager", "sales"],
+        required: function () {
+            return this.userType === "employer";
+        }
+    },
+    userType: {
+        type: String,
+        enum: ["candidate","employer"],
+        required:true,
+    }
 })
 
 signupSchema.pre("save",async function (next)  {

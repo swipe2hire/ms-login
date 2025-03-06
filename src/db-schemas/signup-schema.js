@@ -28,4 +28,6 @@ signupSchema.pre("save",async function (next)  {
     next();
 })
 
-module.exports = signupSchema;
+const signupUser = mongoose.model("profile", signupSchema)
+
+module.exports = signupUser;

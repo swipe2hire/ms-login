@@ -3,14 +3,13 @@ const loginModel = require("../joi-schema/login-request")
 const responseHelper = require("../utils/responseHelper")
 const verifyOtpModel = require("../joi-schema/verify-otp-request")
 const literals = require("../literals/literals")
-const signUpSchema = require("../db-schemas/signup-schema")
 const bcrypt = require("bcryptjs");
 const configs = require("../../config")
 const otpUser = require("../db-schemas/otp-schema");
+const signupUser = require("../db-schemas/signup-schema")
 const otpGenerator = require("otp-generator")
 const jwt = require("jsonwebtoken");
 const {sendOTPEmail} = require("../services/emailService")
-const { default: mongoose } = require("mongoose")
 
 
 
@@ -18,7 +17,6 @@ const { default: mongoose } = require("mongoose")
 
 //Login Route
 exports.login = async (request,response) => {
-const signupUser = mongoose.model("signupUser",signUpSchema)
 const {error,value} = loginModel.loginRequest.validate(request.body)
 if(error) {
     return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError);
@@ -55,7 +53,6 @@ if(error) {
 
 //signup
 exports.signup = async(request,response) => {
-    const signupUser = mongoose.model("signupUser",signUpSchema)
     const {error,value} = schema.signupSchema.validate(request.body);
     if(error) {
        return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError);
@@ -80,7 +77,6 @@ exports.signup = async(request,response) => {
 
 //sendotp
 exports.sendotp = async(request,response) =>{
-    const signupUser = mongoose.model("signupUser",signUpSchema)
     const {error,value} = schema.signupSchema.validate({...request.body});
     if(error) {
         return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
@@ -130,7 +126,6 @@ exports.sendotp = async(request,response) =>{
 
 //verify
 exports.verifyotp = async(request,response) =>{
-   const signupUser = mongoose.model("signupUser",signUpSchema)
    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
    const {error,value} = verifyOtpModel.verifyOtpRequest.validate(request.body)
    if(error) {
@@ -162,7 +157,6 @@ exports.verifyotp = async(request,response) =>{
 //forgotPassword
 
 exports.verifyEmail= async(request,response) => {
-    const signupUser = mongoose.model("signupUser",signUpSchema)
     if(!request.body?.email){
         return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
     } else {
@@ -183,7 +177,6 @@ exports.verifyEmail= async(request,response) => {
 
 
 exports.resetPassword = async(request,response) => {
-    const signupUser = mongoose.model("signupUser",signUpSchema)
     if(!request.body?.email || !request.body?.password){
         return responseHelper.sendReponse(response,literals.errorCodes.invaliJasonError)
     } else {

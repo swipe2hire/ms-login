@@ -35,7 +35,7 @@ if(error) {
                     sameSite: "strict",
                     maxAge: 7 * 24 * 60 * 60 * 1000
                 })
-                return responseHelper.sendReponse(response,{data:{token:jwtToken, name:user.name, role:user.role},error:null,validation:null})
+                return responseHelper.sendReponse(response,{data:{userType: user.userType, token:jwtToken, name:user.name, role:user.role},error:null,validation:null})
             } else {
                 return responseHelper.sendReponse(response,literals.errorCodes.invalidCredentials)
             }

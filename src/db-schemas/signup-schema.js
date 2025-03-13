@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const { required } = require("joi");
 
 const signupSchema = new mongoose.Schema({
+    userId: {type:Number, required:true, default: () => Math.floor(100000 + Math.random() * 900000) },
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },

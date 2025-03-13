@@ -27,7 +27,7 @@ if(error) {
         if(user) {
             const isPasswordMatch = await bcrypt.compare(password, user.password);
             if(isPasswordMatch) {
-                const jwtToken = jwt.sign({ userId: user._id, email: user.email, role: user.role }, configs.JwtToken, {
+                const jwtToken = jwt.sign({ userId: user._id, email: user.email, role: user.role, userType: user.userType }, configs.JwtToken, {
                     expiresIn: "7d",
                 });
                 response.cookie("s_t",jwtToken,{
